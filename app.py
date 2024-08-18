@@ -41,7 +41,7 @@ def chat():
 
     # Poll for run completion
     while run.status != "completed":
-        time.sleep(0.5)
+        time.sleep(0.2)
         run = client.beta.threads.runs.retrieve(thread_id=thread_id, run_id=run.id)
 
     # Retrieve messages and find the latest assistant's response
