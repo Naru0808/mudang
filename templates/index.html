@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>생일 정보 입력</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Noto Sans KR', sans-serif;
+        }
+        .container {
+            padding-top: 20px;
+            max-width: 960px;
+        }
+        .form-section {
+            background: #fff;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .form-row {
+            display: flex;
+            align-items: center; /* Ensure vertical alignment */
+            margin-bottom: 10px;
+        }
+        .form-row > label {
+            margin-right: 20px; /* Space between label and select box */
+            white-space: nowrap; /* Prevents label from wrapping */
+        }
+        .form-row > div {
+            flex-grow: 1; /* Allows select element to fill space */
+        }
+        .btn-group {
+            display: flex;
+            justify-content: flex-start;
+            padding-top: 10px;
+        }
+        .message-window {
+            background-color: #e9ecef;
+            border: 1px solid #ced4da;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+        .message {
+            background-color: #f4f4f9;
+            border: 1px solid #ced4da;
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 10px;
+            color: #333;
+        }
+
+        .user-message {
+            text-align: left;
+            font-weight: bold;
+        }
+
+        .assistant-message {
+            text-align: left;
+            font-size: 0.95em;
+        }
+
+
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h3>정확한 운세를 위한 생년월일 정보 입력</h3>
+        <form id="birthdayForm">
+            <!-- Gender Section -->
+            <div class="form-section">
+                <div class="form-row">
+                    <label for="gender">성별:</label>
+                    <div>
+                        <select id="gender" class="form-select">
+                            <option value="male" selected>남성</option>
+                            <option value="female">여성</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Date of Birth Section -->
+            <div class="form-section">
+                <div class="form-row">
+                    <label for="birthYear">생년:</label>
+                    <div><select id="birthYear" class="form-select"></select></div>
+                    <label for="birthMonth">월:</label>
+                    <div><select id="birthMonth" class="form-select"></select></div>
+                    <label for="birthDay">일:</label>
+                    <div><select id="birthDay" class="form-select"></select></div>
+                </div>
+                <div class="form-row">
+                    <label for="calendarType">양력/음력:</label>
+                    <div>
+                        <select id="calendarType" class="form-select">
+                            <option value="">선택하세요</option>
+                            <option value="solar">양력</option>
+                            <option value="lunar">음력</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Time of Birth Section -->
+            <div class="form-section">
+                <div class="form-row">
+                    <label for="birthHour">시간 (시):</label>
+                    <div>
+                        <select id="birthHour" class="form-select"></select>
+                    </div>
+                    <label for="birthMinute">분:</label>
+                    <div>
+                        <select id="birthMinute" class="form-select"></select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="btn-group">
+                <button type="button" class="btn btn-primary" onclick="displayInformation()">확인</button>
+                <button type="button" class="btn btn-secondary" onclick="resetForm()">초기화</button>
+            </div>
+        </form>
+        <!-- Message window to display the entered information -->
+        <div class="message-window" id="messageWindow"></div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            populateYears();
+            populateMonths();
+            populateDays();
+            populateHours();
+            populateMinutes();
+        });
+
+        function populateYears() {
+            const currentYear = new Date().getFullYear();
+            const yearSelect = document.getElementById('birthYear');
+            for (let i = currentYear; i >= currentYear - 100; i--) {
+                yearSelect.options.add(new Option(i + '년', i));
+            }
+        }
+
+        function populateMonths() {
+            const monthSelect = document.getElementById('birthMonth');
+            for (let i = 1; i <= 12; i++) {
+                monthSelect.options.add(new Option(i + '월', i));
+            }
+        }
+
+        function populateDays() {
+            const daySelect = document.getElementById('birthDay');
+            for (let i = 1; i <= 31; i++) {
+                daySelect.options.add(new Option(i + '일', i));
+            }
+        }
+
+        function populateHours() {
+            const hourSelect = document.getElementById('birthHour');
+            for (let i = 0; i < 24; i++) {
+                hourSelect.options.add(new Option(i + '시', i));
+            }
+        }
+
+        function populateMinutes() {
+            const minuteSelect = document.getElementById('birthMinute');
+            for (let i = 0; i < 60; i++) {
+                minuteSelect.options.add(new Option(i + '분', i));
+            }
+        }
+
+        function displayInformation() {
+            const gender = document.getElementById('gender').value === 'male' ? '남성' : '여성';
+            const year = document.getElementById('birthYear').value + '년';
+            const month = document.getElementById('birthMonth').value + '월';
+            const day = document.getElementById('birthDay').value + '일';
+            const calendarType = document.getElementById('calendarType').value === 'solar' ? '양력' : '음력';
+            const hour = document.getElementById('birthHour').value + '시';
+            const minute = document.getElementById('birthMinute').value + '분';
+            const message = `${gender}, ${year} ${month} ${day}, ${hour} ${minute}, ${calendarType}`;
+
+            // Send the message to the Flask server using AJAX
+            var xhr = new XMLHttpRequest();
+            xhr.open("POST", "/chat", true);
+            xhr.setRequestHeader("Content-Type", "application/json");
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState === 4 && xhr.status === 200) {
+                    var response = JSON.parse(xhr.responseText);
+                    updateChat(message, response.response);  // Updated to use the modified function
+                }
+            };
+            var data = JSON.stringify({"message": message});
+            xhr.send(data);
+        }
+
+
+// You might need this function to update the display area or chat box.
+        function updateChat(userText, assistantText) {
+            var userMessageDiv = document.createElement('div');
+            userMessageDiv.className = 'message user-message';
+            userMessageDiv.textContent = "You: " + userText;
+            document.getElementById('messageWindow').appendChild(userMessageDiv);
+
+            if (assistantText) {
+                var assistantMessageDiv = document.createElement('div');
+                assistantMessageDiv.className = 'message assistant-message';
+                assistantMessageDiv.textContent = "Assistant: " + assistantText;
+                document.getElementById('messageWindow').appendChild(assistantMessageDiv);
+            }
+        }
+
+
+        function resetForm() {
+            document.getElementById('birthdayForm').reset();
+            document.getElementById('messageWindow').textContent = ''; // Clear message window on reset
+        }
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
