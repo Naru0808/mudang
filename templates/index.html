@@ -208,12 +208,30 @@
             document.getElementById('messageWindow').appendChild(userMessageDiv);
 
             if (assistantText) {
+                // 텍스트 스타일링과 줄바꿈 처리
+                assistantText = formatAssistantText(assistantText);
+
                 var assistantMessageDiv = document.createElement('div');
                 assistantMessageDiv.className = 'message assistant-message';
-                assistantMessageDiv.textContent = "Assistant: " + assistantText;
+                assistantMessageDiv.innerHTML = assistantText; // innerHTML을 사용하여 HTML 태그 처리
                 document.getElementById('messageWindow').appendChild(assistantMessageDiv);
             }
         }
+
+        function formatAssistantText(text) {
+    // Replace dashes with line breaks and a dash
+            text = text.replace(/-/g, '<br>-');
+
+            // Format bold text enclosed in '**'
+            text = text.replace(/\*\*(.+?)\*\*/g, '<br><br><strong>$1</strong>');
+
+            // Replace '###' to format text as bold, with two line breaks before and one after
+            text = text.replace(/###\s*(.+?)\s*###/g, '<br><br><br><strong>$1</strong><br>');
+
+            return text;
+}
+
+
 
 
         function resetForm() {
