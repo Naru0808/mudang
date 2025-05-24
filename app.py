@@ -1,169 +1,118 @@
-from flask import Flask, request, jsonify, render_template
-from flask_cors import CORS
-from lunardate import LunarDate
-from datetime import datetime
-import json
-import os
-import time
-from dotenv import load_dotenv
-from openai import OpenAI
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>사주팔자 계산기</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { background-color: #f8f9fa; font-family: 'Noto Sans KR', sans-serif; }
+    .container { padding-top: 20px; max-width: 800px; }
+    .form-section {
+      background: #fff; padding: 15px; margin-bottom: 20px;
+      border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .form-row { display: flex; align-items: center; margin-bottom: 10px; }
+    .form-row > label { margin-right: 10px; width: 80px; }
+    .form-row > div { flex-grow: 1; }
+    .message-window {
+      background-color: #ffffff;
+      border: 2px dashed #bbb;
+      padding: 20px;
+      border-radius: 10px;
+      margin-top: 20px;
+      font-size: 1rem;
+      line-height: 1.6;
+    }
+    .btn-group { margin-top: 10px; }
+    .loading-message { font-style: italic; color: #777; margin-top: 10px; }
+  </style>
+</head>
+<body>
 
-# Load OpenAI API key
-load_dotenv()
-API_KEY = os.getenv('OPENAI_API_KEY')
-client = OpenAI(api_key=API_KEY)
-assistant_id = 'asst_YdIRpe6lAQIw9OBU9UOIFnJG'
-thread_id = None
+<div class="container">
+  <h3>정확한 사주 계산기</h3>
+  <form id="birthdayForm">
+    <div class="form-section">
+      <div class="form-row">
+        <label>양력/음력</label>
+        <div>
+          <select id="calendarType" class="form-select">
+            <option value="solar">양력</option>
+            <option value="lunar">음력</option>
+          </select>
+        </div>
+        <label>윤달</label>
+        <div>
+          <select id="leap" class="form-select">
+            <option value="false">아니오</option>
+            <option value="true">예</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <label>생년월일</label>
+        <div><input id="year" type="number" class="form-control" placeholder="년" /></div>
+        <div><input id="month" type="number" class="form-control" placeholder="월" /></div>
+        <div><input id="day" type="number" class="form-control" placeholder="일" /></div>
+      </div>
+      <div class="form-row">
+        <label>출생 시간</label>
+        <div><input id="hour" type="number" class="form-control" placeholder="시 (0~23)" /></div>
+      </div>
+      <div class="btn-group">
+        <button type="button" class="btn btn-primary" onclick="calculateSaju()">사주 보기</button>
+        <button type="button" class="btn btn-secondary" onclick="resetForm()">초기화</button>
+      </div>
+    </div>
+  </form>
 
-app = Flask(__name__)
-CORS(app)
+  <div class="loading-message" id="loadingMessage" style="display:none;">⏳ 결과를 계산 중입니다...</div>
+  <div class="message-window" id="messageWindow">사주 결과가 여기에 표시됩니다.</div>
+</div>
 
-# 간지 목록
-gans = ['갑', '을', '병', '정', '무', '기', '경', '신', '임', '계']
-jis = ['자', '축', '인', '묘', '진', '사', '오', '미', '신', '유', '술', '해']
+<script>
+  function calculateSaju() {
+    const year = parseInt(document.getElementById("year").value);
+    const month = parseInt(document.getElementById("month").value);
+    const day = parseInt(document.getElementById("day").value);
+    const hour = parseInt(document.getElementById("hour").value);
+    const isLunar = document.getElementById("calendarType").value === "lunar";
+    const leap = document.getElementById("leap").value === "true";
 
-# 정확한 일주 간지 계산
-def calculate_day_ganji(date):
-    base_date = datetime(1900, 1, 31)
-    delta_days = (date - base_date).days
-    idx = delta_days % 60
-    return gans[idx % 10] + jis[idx % 12]
+    document.getElementById("loadingMessage").style.display = "block";
+    document.getElementById("messageWindow").innerHTML = "";
 
-# 입춘 기준 연주
-def calculate_year_ganji(date, ipchun_table):
-    year = date.year
-    ipchun_dt = datetime.strptime(ipchun_table.get(str(year)), "%Y-%m-%d %H:%M")
-    if date < ipchun_dt:
-        year -= 1
-    idx = (year - 1984 + 60) % 60
-    return gans[idx % 10] + jis[idx % 12]
+    fetch("/calculate-saju", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ year, month, day, hour, isLunar, leap })
+    })
+    .then(res => res.json())
+    .then(data => {
+      document.getElementById("loadingMessage").style.display = "none";
+      if (data.error) {
+        document.getElementById("messageWindow").innerHTML = `<span style="color:red;">오류: ${data.error}</span>`;
+      } else {
+        document.getElementById("messageWindow").innerHTML = `
+          <strong>🗓 날짜 정보</strong><br>
+          - 양력: <strong>${data.solar}</strong><br>
+          - 음력: <strong>${data.lunar}</strong><br><br>
+          <strong>📜 사주 네 기둥</strong><br>
+          - 연주: ${data.year}<br>
+          - 월주: ${data.month}<br>
+          - 일주: ${data.day}<br>
+          - 시주: ${data.hour}<br>
+        `;
+      }
+    });
+  }
 
-# 절입일 기준 월주
-def calculate_month_ganji(date, jeol_table):
-    year, month = date.year, date.month
-    key = f"{year}-{str(month).zfill(2)}"
-    jeol_dt = datetime.strptime(jeol_table.get(key), "%Y-%m-%d %H:%M")
-    if date < jeol_dt:
-        month -= 1
-        if month == 0:
-            year -= 1
-            month = 12
-    idx = ((year - 1984) * 12 + (month - 1)) % 60
-    return gans[idx % 10] + jis[idx % 12]
+  function resetForm() {
+    document.getElementById("birthdayForm").reset();
+    document.getElementById("messageWindow").innerHTML = "사주 결과가 여기에 표시됩니다.";
+    document.getElementById("loadingMessage").style.display = "none";
+  }
+</script>
 
-# 시주 계산
-def calculate_hour_ganji(day_gan, hour):
-    gan_index = gans.index(day_gan)
-    branch_index = hour // 2 % 12
-    stem_index = (gan_index * 2 + branch_index) % 10
-    return gans[stem_index] + jis[branch_index]
-
-@app.route("/", methods=["GET"])
-def index():
-    return render_template("index.html")
-
-@app.route("/chat", methods=["POST"])
-def chat():
-    global thread_id
-    message = request.json.get("message", "")
-
-    if not thread_id:
-        thread = client.beta.threads.create()
-        thread_id = thread.id
-
-    client.beta.threads.messages.create(
-        thread_id=thread_id,
-        role="user",
-        content=message
-    )
-
-    run = client.beta.threads.runs.create(
-        thread_id=thread_id,
-        assistant_id=assistant_id,
-    )
-
-    while run.status != "completed":
-        time.sleep(0.2)
-        run = client.beta.threads.runs.retrieve(thread_id=thread_id, run_id=run.id)
-
-    responses = client.beta.threads.messages.list(thread_id=thread_id)
-    assistant_message = next((msg.content[0].text.value for msg in responses.data if msg.role == "assistant"), "No response found")
-
-    return jsonify({"response": assistant_message})
-
-@app.route("/reset", methods=["POST"])
-def reset():
-    global thread_id
-    thread_id = None
-    return jsonify({"message": "Chat has been reset."})
-
-@app.route('/calculate-saju', methods=['POST'])
-def calculate_saju():
-    try:
-        data = request.json
-        is_lunar = data.get('isLunar', False)
-        year = data['year']
-        month = data['month']
-        day = data['day']
-        hour = data['hour']
-        leap = data.get('leap', False)
-
-        with open('ipchun.json', encoding='utf-8') as f:
-            ipchun_table = json.load(f)
-        with open('jeol.json', encoding='utf-8') as f:
-            jeol_table = json.load(f)
-
-        # 음력 날짜 → 양력으로 변환 (간지 계산은 이 변환된 양력을 기준으로)
-        if is_lunar:
-            lunar = LunarDate(year, month, day, leap)
-            solar_date = lunar.toSolarDate()
-            lunar_str = f"{year}년 {month}월 {day}일 (윤달: {'예' if leap else '아니오'})"
-        else:
-            solar_date = datetime(year, month, day)
-            lunar_date = LunarDate.fromSolarDate(year, month, day)
-            lunar_str = f"{lunar_date.year}년 {lunar_date.month}월 {lunar_date.day}일 (윤달: {'예' if lunar_date.isleap() else '아니오'})"
-
-        # 사주 계산은 변환된 양력 날짜 기준
-        year_ganji = calculate_year_ganji(solar_date, ipchun_table)
-        month_ganji = calculate_month_ganji(solar_date, jeol_table)
-        day_ganji = calculate_day_ganji(solar_date)
-        hour_ganji = calculate_hour_ganji(day_ganji[0], hour)
-
-        return jsonify({
-            'solar': solar_date.strftime('%Y-%m-%d'),
-            'lunar': lunar_str,
-            'year': year_ganji,
-            'month': month_ganji,
-            'day': day_ganji,
-            'hour': hour_ganji
-        })
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/convert-lunar', methods=['POST'])
-def convert_lunar():
-    try:
-        data = request.json
-        to = data.get("to")
-        year = data['year']
-        month = data['month']
-        day = data['day']
-        leap = data.get('leap', False)
-
-        if to == 'solar':
-            solar = LunarDate(year, month, day, leap).toSolarDate()
-            return jsonify({"solar": solar.strftime('%Y-%m-%d')})
-        elif to == 'lunar':
-            solar = datetime(year, month, day)
-            lunar = LunarDate.fromSolarDate(solar.year, solar.month, solar.day)
-            return jsonify({
-                "lunar": f"{lunar.year}-{str(lunar.month).zfill(2)}-{str(lunar.day).zfill(2)}",
-                "leap": lunar.isleap()
-            })
-        else:
-            return jsonify({"error": "Invalid conversion type"}), 400
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-if __name__ == '__main__':
-    app.run(debug=True)
+</body>
+</html>
