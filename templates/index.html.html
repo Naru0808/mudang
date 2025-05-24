@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>사주 계산기 연동</title>
+  <style>
+    body { font-family: 'Noto Sans KR', sans-serif; background-color: #f8f9fa; padding: 30px; }
+    .card { background-color: white; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); padding: 20px; max-width: 400px; margin-top: 20px; }
+    .card h3 { margin-top: 0; border-bottom: 1px solid #ddd; padding-bottom: 10px; }
+    .info-item { margin: 10px 0; font-size: 18px; }
+    button { padding: 10px 15px; font-size: 16px; margin-right: 10px; }
+  </style>
+</head>
+<body>
+  <h2>사주 계산 요청</h2>
+  <button onclick="fetchSaju()">/calculate-saju 실행</button>
+  <button onclick="fetchConvert()">/convert-lunar 실행</button>
+  <div id="sajuCard" class="card" style="display: none;">
+    <h3>사주 결과</h3>
+    <div class="info-item" id="solarDate"></div>
+    <div class="info-item" id="yearGanji"></div>
+    <div class="info-item" id="monthGanji"></div>
+    <div class="info-item" id="dayGanji"></div>
+    <div class="info-item" id="hourGanji"></div>
+  </div>
+  <script>
+    async function fetchSaju() {
+      const response = await fetch("http://localhost:5000/calculate-saju", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isLunar: true, year: 1999, month: 6, day: 7, hour: 14, leap: false })
+      });
+      const data = await response.json();
+      displaySajuCard(data);
+    }
+    async function fetchConvert() {
+      const response = await fetch("http://localhost:5000/convert-lunar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ to: "solar", year: 1999, month: 6, day: 7, leap: false })
+      });
+      const data = await response.json();
+      alert("변환된 날짜: " + JSON.stringify(data));
+    }
+    function displaySajuCard(data) {
+      document.getElementById("solarDate").textContent = `▶ 양력 생일: ${data.solar}`;
+      document.getElementById("yearGanji").textContent = `연주: ${data.year}`;
+      document.getElementById("monthGanji").textContent = `월주: ${data.month}`;
+      document.getElementById("dayGanji").textContent = `일주: ${data.day}`;
+      document.getElementById("hourGanji").textContent = `시주: ${data.hour}`;
+      document.getElementById("sajuCard").style.display = "block";
+    }
+  </script>
+</body>
+</html>
